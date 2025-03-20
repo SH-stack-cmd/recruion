@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sök jobb med Recruion</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f7fc;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+        }
+        .container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+        }
+        .search-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .search-box, .filter-box {
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            width: 100%;
+            max-width: 300px;
+        }
+        .search-button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .search-button:hover {
+            background-color: #0056b3;
+        }
+        .job-list {
+            margin-top: 20px;
+            text-align: left;
+        }
+        .job-item {
+            padding: 15px;
+            border-bottom: 1px solid #ddd;
+            background: #fff;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .toggle-description {
+            color: #007bff;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+        .job-description {
+            display: none;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Sök jobb med Recruion</h1>
+        <div class="search-container">
+            <input type="text" id="search" class="search-box" placeholder="Sök jobb..." onkeypress="handleKeyPress(event)">
+            <select id="filter" class="filter-box">
+                <option value="all">Alla jobb</option>
+                <option value="Konsultuppdrag">Konsultuppdrag</option>
+                <option value="Rekrytering">Rekrytering</option>
+            </select>
+            <button class="search-button" onclick="searchJobs()">Sök</button>
+        </div>
+        <div class="job-list" id="jobList"></div>
+    </div>
+    
+    <script>
+        async function fetchJobs(searchValue) {
+            try {
+                const response = await fetch(`https://jobsearch.api.jobtechdev.se/search?q=${encodeURIComponent(searchValue)}`);
+                if (!response.ok) throw new Error(`HTTP-fel! Status: ${response.status}`);
+                const data = await response.json();
+                return data.hits || [];
+            } catch (error) {
+                console.error("Kunde inte hämta jobbdata", error);
+                return [];
+            }
+        }
+
+        function toggleDescription(id) {
+            const desc = document.getElementById(id);
+            if (desc.style.display === "none") {
+                desc.style.display = "block";
+            } else {
+                desc.style.display = "none";
+            }
+        }
+
+        async function searchJobs() {
+            const searchValue = document.getElementById("search").value.trim();
+            const filterValue = document.getElementById("filter").value;
+            const jobList = document.getElementById("jobList");
+            jobList.innerHTML = "Laddar...";
+
+            const jobs = await fetchJobs(searchValue);
+            jobList.innerHTML = "";
+
+            const filteredJobs = jobs.filter(job => 
+                filterValue === "all" || job.occupation_group && job.occupation_group.label.includes(filterValue)
+            );
+
+            if (filteredJobs.length === 0) {
+                jobList.innerHTML = "Det finns inga jobb inom denna kategori just nu.";
+                return;
+            }
+
+            filteredJobs.forEach((job, index) => {
+                const jobItem = document.createElement("div");
+                jobItem.classList.add("job-item");
+                jobItem.innerHTML = `
+                    <strong>${job.headline}</strong>
+                    <p>${job.employer?.name || "Okänt företag"}</p>
+                    <span class="toggle-description" onclick="toggleDescription('desc-${index}')">Visa mer</span>
+                    <div id="desc-${index}" class="job-description">${job.description.text}</div>
+                `;
+                jobList.appendChild(jobItem);
+            });
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === "Enter") {
+                searchJobs();
+            }
+        }
+    </script>
+</body>
+</html>
